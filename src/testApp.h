@@ -2,11 +2,7 @@
 
 #include "ofMain.h"
 #include "ofxCv.h"
-#include "ofxAudioUnit.h"
-
 #include "ofxMaxim.h"
-#include "maxiGrains.h"
-#include <sys/time.h>
 
 typedef hannWinFunctor grainPlayerWin;
 
@@ -29,9 +25,9 @@ public:
     float bass;
     float canvas_width;
     float canvas_height;
-    
-    void mouseMoved(int x, int y );
-    
+    float mapped_rate;
+    float mapped_volume;
+        
     void audioRequested 	(float * input, int bufferSize, int nChannels); /* output method */
 	void audioReceived 	(float * input, int bufferSize, int nChannels); /* input method */
 	
@@ -58,11 +54,7 @@ public:
 	int current;
 	double pos;
     
-    float 				* fftSmoothed;
-    // we will draw a rectangle, bouncing off the wall:
-    float 				px, py, vx, vy;
-    
+    float * fftSmoothed;
+    float px, py, vx, vy;
     int nBandsToGet;
-    float prevx, prevy;
-//    		void mouseDragged(int x, int y, int button);
 };

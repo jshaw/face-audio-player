@@ -1,15 +1,7 @@
 #include "testApp.h"
-
 #include "maximilian.h"/* include the lib */
-#include "time.h"
 
 using namespace ofxCv;
-using namespace cv;
-
-float volume;
-float bass;
-float mapped_rate;
-float mapped_volume;
 
 //-------------------------------------------------------------
 testApp::~testApp() {
@@ -19,7 +11,6 @@ testApp::~testApp() {
 
 void testApp::setup() {
     samp.load(ofToDataPath("sounds/PanamaAlwaysClassixxRemix3.wav"));
-//    panama.loadSound("sounds/PanamaAlwaysClassixxRemix.mp3");
 
     px = 300;
 	py = 300;
@@ -28,13 +19,27 @@ void testApp::setup() {
     
     canvas_width = 640;
     canvas_height = 480;
-
+	
+	nBandsToGet = 128;
+    
+    ts = new maxiPitchStretch<grainPlayerWin>(&samp);
+	stretches.push_back(ts);
+	speed = 1;
+    rate = 2;
+	grainLength = 0.05;
+	current=0;
+    
+    sampleRate 			= 44100; /* Sampling Rate */
+	initialBufferSize	= 512;	/* Buffer Size. you have to fill this buffer with sound*/
+	lAudioOut			= new float[initialBufferSize];/* outputs */
+	rAudioOut			= new float[initialBufferSize];
+	lAudioIn			= new float[initialBufferSize];/* inputs */
+	rAudioIn			= new float[initialBufferSize];
+    
     fftSmoothed = new float[8192];
 	for (int i = 0; i < 8192; i++){
 		fftSmoothed[i] = 0;
 	}
-	
-	nBandsToGet = 128;
     
     ofSetVerticalSync(true);
 	ofSetFrameRate(120);
@@ -46,42 +51,23 @@ void testApp::setup() {
 	ofEnableAlphaBlending();
     
     
-    
-    sampleRate 			= 44100; /* Sampling Rate */
-	initialBufferSize	= 512;	/* Buffer Size. you have to fill this buffer with sound*/
-	lAudioOut			= new float[initialBufferSize];/* outputs */
-	rAudioOut			= new float[initialBufferSize];
-	lAudioIn			= new float[initialBufferSize];/* inputs */
-	rAudioIn			= new float[initialBufferSize];
-    
-    
     /* This is a nice safe piece of code */
 	memset(lAudioOut, 0, initialBufferSize * sizeof(float));
 	memset(rAudioOut, 0, initialBufferSize * sizeof(float));
 	
 	memset(lAudioIn, 0, initialBufferSize * sizeof(float));
 	memset(rAudioIn, 0, initialBufferSize * sizeof(float));
-    
-    
-    ts = new maxiPitchStretch<grainPlayerWin>(&samp);
-	stretches.push_back(ts);
-	speed = 1;
-    rate = 2;
-	grainLength = 0.05;
-	current=0;
 	
 	fft.setup(1024, 512, 256);
 	oct.setup(44100, 1024, 10);
 	
-	int current = 0;
 	ofxMaxiSettings::setup(sampleRate, 2, initialBufferSize);
 	ofSoundStreamSetup(2,0, this, maxiSettings::sampleRate, initialBufferSize, 4);/* Call this last ! */
 	
 	ofSetVerticalSync(true);
 	ofEnableAlphaBlending();
 	ofEnableSmoothing();
-    
-    
+
 }
 
 void testApp::update() {
@@ -109,6 +95,7 @@ void testApp::update() {
 		py = ofGetHeight();
 		vy *= -1;
 	}
+    
 	// (3) slow down velocity:
 	vx 	*= 0.996f;
 	vy 	*= 0.996f;
@@ -118,13 +105,9 @@ void testApp::update() {
 		finder.update(cam);
 	}
     
-//    panama.play();
-    
-//    panama.setVolume(1.0f);
     float vel = sqrt(vx*vx + vy*vy);
-//    panama.setVolume(MIN(vel/5.0f, 1));
-    
     float * val = ofSoundGetSpectrum(nBandsToGet);		// request 128 values for fft
+    
 	for (int i = 0;i < nBandsToGet; i++){
 		
 		// let the smoothed calue sink to zero:
@@ -138,8 +121,7 @@ void testApp::update() {
 }
 
 void testApp::draw() {
-    //panama.play();
-
+    
     ofEnableAlphaBlending();
     ofSetColor(255,255,255,0);
     ofRect(0,ofGetHeight(),10*128,200);
@@ -179,9 +161,6 @@ void testApp::draw() {
         rate = ((double ) bass / ofGetHeight() * 4.0) - 2.0;
         
         mapped_rate = ofMap( rate, -2, 2, 0, 2);
-        
-        ofLog(OF_LOG_NOTICE, "VOLUME " + ofToString(volume));
-        ofLog(OF_LOG_NOTICE, "BASS " + ofToString(bass));
         
 		sunglasses.setAnchorPercent(.5, .5);
 		float scaleAmount = .85 * object.width / sunglasses.getWidth();
@@ -227,55 +206,3 @@ void testApp::audioReceived 	(float * input, int bufferSize, int nChannels){
 		rAudioIn[i] = input[i*2+1];
 	}
 }
-
-
-//--------------------------------------------------------------
-void testApp::mouseMoved(int x, int y ){
-//	speed = ((double ) x / ofGetWidth() * 4.0) - 2.0;
-//	grainLength = ((double) y / ofGetHeight() * 0.1) + 0.001;
-//	pos = ((double) x / ofGetWidth() * 2.0);
-    
-    rate = ((double ) y / ofGetHeight() * 4.0) - 2.0;
-    mapped_rate = ofMap( rate, -2, 2, 0, 2);
-    
-    ofLog(OF_LOG_NOTICE, "FACE OBJECT! " + ofToString(mapped_rate));
-
-    
-    //	cout << pos << endl;
-	
-}
-
-//--------------------------------------------------------------
-//void testApp::mouseMoved(int x, int y ){
-
-    //	The varispeed has an adjustable playback rate. Setting
-    //	it to 1 means a normal playback speed. Anything higher
-    //	or lower speeds it up or slows it down accordingly.
-	
-//	float newSpeed = ofMap(x, 0, ofGetWidth(), 0.01, 2, true);
-//	
-//	AudioUnitSetParameter(varispeed.getUnit(),
-//						  kVarispeedParam_PlaybackRate,
-//						  kAudioUnitScope_Global,
-//						  0,
-//						  newSpeed,
-//						  0);
-	
-//	float newCutoff = ofMap(y, 0, ofGetHeight(), 10, 6900);
-//	
-//	AudioUnitSetParameter(lowpass.getUnit(),
-//						  kLowPassParam_CutoffFrequency,
-//						  kAudioUnitScope_Global,
-//						  0,
-//						  newCutoff,
-//						  0);
-//}
-
-//--------------------------------------------------------------
-//void testApp::mouseDragged(int x, int y, int button){}
-//--------------------------------------------------------------
-//void testApp::mousePressed(int x, int y, int button){}
-//--------------------------------------------------------------
-//void testApp::mouseReleased(int x, int y, int button){}
-//--------------------------------------------------------------
-// void testApp::dragEvent(ofDragInfo dragInfo){}
